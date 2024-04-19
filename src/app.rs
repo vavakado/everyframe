@@ -1,20 +1,55 @@
+use std::collections::BTreeMap;
+
+use chrono::{DateTime, Datelike, Local, TimeDelta, TimeZone, Weekday};
+use egui::{Color32, FontData, FontDefinitions, FontFamily, RichText};
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
     // Example stuff:
-    label: String,
+    todos: BTreeMap<u64, Task>,
+    task: String,
+    dayly: bool,
+    id: u64,
+}
 
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    value: f32,
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(default)]
+pub struct Task {
+    pub name: String,
+    pub done: bool,
+    pub time: Interval,
+    pub reset: bool,
+    pub last_reset: DateTime<Local>,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, PartialEq)]
+pub enum Interval {
+    Dayly,
+    Weekly,
+}
+
+impl Default for Task {
+    fn default() -> Self {
+        Self {
+            name: "todo".to_owned(),
+            done: false,
+            time: Interval::Dayly,
+            reset: true,
+            last_reset: Local.timestamp_opt(1672534861, 0).unwrap(),
+        }
+    }
 }
 
 impl Default for TemplateApp {
     fn default() -> Self {
         Self {
+            todos: BTreeMap::new(),
             // Example stuff:
-            label: "Hello World!".to_owned(),
-            value: 2.7,
+            task: "".to_owned(),
+            id: 0,
+            dayly: false,
         }
     }
 }
@@ -24,7 +59,20 @@ impl TemplateApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         // This is also where you can customize the look and feel of egui using
         // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
+        let mut fonts = FontDefinitions::default();
+        fonts.font_data.insert(
+            "my_font".to_owned(),
+            FontData::from_static(include_bytes!("../assets/VictorMono-Medium.ttf")),
+        ); // .ttf and .otf supported
 
+        // Put my font first (highest priority):
+        fonts
+            .families
+            .get_mut(&FontFamily::Proportional)
+            .unwrap()
+            .insert(0, "my_font".to_owned());
+
+        cc.egui_ctx.set_fonts(fonts);
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
         if let Some(storage) = cc.storage {
@@ -66,44 +114,74 @@ impl eframe::App for TemplateApp {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("eframe template");
-
-            ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(&mut self.label);
-            });
-
-            ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-            if ui.button("Increment").clicked() {
-                self.value += 1.0;
+            let now = Local::now();
+            if now.weekday() == Weekday::Mon {
+                for (&_id, task) in &mut self.todos {
+                    if task.time == Interval::Weekly && now - task.last_reset >= TimeDelta::days(7)
+                    {
+                        task.done = false;
+                        task.reset = true;
+                        task.last_reset = now;
+                    }
+                }
             }
 
+            for (&_id, task) in &mut self.todos {
+                if task.time == Interval::Dayly && now - task.last_reset >= TimeDelta::days(1) {
+                    task.done = false;
+                    task.reset = true;
+                    task.last_reset = now;
+                }
+            }
+
+            // The central panel the region left after adding TopPanel's and SidePanel's
+            ui.heading("Everyframe");
+
+            let mut to_remove = Vec::new();
+            for (&id, task) in &mut self.todos {
+                ui.horizontal(|ui| {
+                    ui.checkbox(&mut task.done, "");
+                    ui.label(if task.time == Interval::Dayly {
+                        task.name.clone() + " [D]"
+                    } else {
+                        task.name.clone() + " [W]"
+                    });
+                    if ui.button("Remove").clicked() {
+                        to_remove.push(id);
+                    }
+                });
+            }
+            for id in to_remove {
+                self.todos.remove(&id);
+            }
             ui.separator();
 
-            ui.add(egui::github_link_file!(
-                "https://github.com/emilk/eframe_template/blob/main/",
-                "Source code."
-            ));
+            ui.horizontal(|ui| {
+                // ui.label("add new task: ");
+                ui.checkbox(&mut self.dayly, "dayly?");
+                ui.text_edit_singleline(&mut self.task);
+                if ui.button("Add new").clicked() {
+                    self.todos.insert(
+                        self.id,
+                        Task {
+                            done: false,
+                            name: self.task.clone(),
+                            time: if self.dayly {
+                                Interval::Dayly
+                            } else {
+                                Interval::Weekly
+                            },
+                            reset: true,
+                            last_reset: Local.timestamp_opt(1672534861, 0).unwrap(),
+                        },
+                    );
+                    self.id += 1;
+                }
+            });
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                powered_by_egui_and_eframe(ui);
                 egui::warn_if_debug_build(ui);
             });
         });
     }
-}
-
-fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 0.0;
-        ui.label("Powered by ");
-        ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-        ui.label(" and ");
-        ui.hyperlink_to(
-            "eframe",
-            "https://github.com/emilk/egui/tree/main/crates/eframe",
-        );
-        ui.label(".");
-    });
 }
