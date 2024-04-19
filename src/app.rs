@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use chrono::{DateTime, Datelike, Local, TimeDelta, TimeZone, Weekday};
-use egui::{Color32, FontData, FontDefinitions, FontFamily, RichText};
+use egui::{FontData, FontDefinitions, FontFamily};
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
