@@ -138,19 +138,35 @@ impl eframe::App for TemplateApp {
             ui.heading("Everyframe");
 
             let mut to_remove = Vec::new();
-            for (&id, task) in &mut self.todos {
-                ui.horizontal(|ui| {
-                    ui.checkbox(&mut task.done, "");
-                    ui.label(if task.time == Interval::Dayly {
-                        task.name.clone() + " [D]"
+            ui.columns(2, |cols| {
+                for (&id, task) in &mut self.todos {
+                    if task.time == Interval::Dayly {
+                        cols[0].horizontal(|ui| {
+                            ui.checkbox(&mut task.done, "");
+                            ui.label(if task.time == Interval::Dayly {
+                                task.name.clone() + " [D]"
+                            } else {
+                                task.name.clone() + " [W]"
+                            });
+                            if ui.button("Remove").clicked() {
+                                to_remove.push(id);
+                            }
+                        });
                     } else {
-                        task.name.clone() + " [W]"
-                    });
-                    if ui.button("Remove").clicked() {
-                        to_remove.push(id);
+                        cols[1].horizontal(|ui| {
+                            ui.checkbox(&mut task.done, "");
+                            ui.label(if task.time == Interval::Dayly {
+                                task.name.clone() + " [D]"
+                            } else {
+                                task.name.clone() + " [W]"
+                            });
+                            if ui.button("Remove").clicked() {
+                                to_remove.push(id);
+                            }
+                        });
                     }
-                });
-            }
+                }
+            });
             for id in to_remove {
                 self.todos.remove(&id);
             }
