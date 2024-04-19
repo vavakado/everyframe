@@ -89,6 +89,22 @@ jobs:
           command: clippy
           args: -- -D warnings
 
+  trunk:
+    name: trunk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.76.0
+          target: wasm32-unknown-unknown
+          override: true
+      - name: Download and install Trunk binary
+        run: wget -qO- https://github.com/thedodd/trunk/releases/latest/download/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
+      - name: Build
+        run: ./trunk build
+
   build:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -108,7 +124,7 @@ jobs:
           TARGET: armv7-unknown-linux-musleabihf
 
         - os: ubuntu-latest
-          target: x86_64-unknown-linux-musl
+          TARGET: x86_64-unknown-linux-musl
 
         - os: windows-latest
           TARGET: x86_64-pc-windows-msvc
