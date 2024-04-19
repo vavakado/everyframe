@@ -159,7 +159,7 @@ jobs:
       name: Upload binaries to release
       if: ${{ github.event_name == 'push' }}
       with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        repo_token: ${{ secrets.RELEASE_KEY }}
         file: everyframe-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
         asset_name: everyframe-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
         tag: ${{ github.ref }}
