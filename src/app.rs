@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
-use chrono::{DateTime, Datelike, Local, TimeDelta, TimeZone, Weekday};
-use egui::{FontData, FontDefinitions, FontFamily};
+use chrono::{Datelike, Local};
+use egui::{CentralPanel, FontData, FontDefinitions, FontFamily};
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -9,25 +9,33 @@ use egui::{FontData, FontDefinitions, FontFamily};
 pub struct TemplateApp {
     // Example stuff:
     todos: BTreeMap<u64, Task>,
+    #[serde(skip)]
     task: String,
-    dayly: bool,
+    daily: bool,
     id: u64,
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
 #[serde(default)]
 pub struct Task {
     pub name: String,
     pub done: bool,
-    pub time: Interval,
-    pub reset: bool,
-    pub last_reset: DateTime<Local>,
+    pub period: Interval,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, PartialEq)]
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug)]
 pub enum Interval {
-    Dayly,
-    Weekly,
+    Daily(u8),
+    Weekly(u8),
+}
+
+impl Interval {
+    fn extract(&self) -> u8 {
+        match self {
+            Self::Daily(s) => *s,
+            Self::Weekly(s) => *s,
+        }
+    }
 }
 
 impl Default for Task {
@@ -35,9 +43,7 @@ impl Default for Task {
         Self {
             name: "todo".to_owned(),
             done: false,
-            time: Interval::Dayly,
-            reset: true,
-            last_reset: Local.timestamp_opt(1672534861, 0).unwrap(),
+            period: Interval::Daily(1),
         }
     }
 }
@@ -46,10 +52,9 @@ impl Default for TemplateApp {
     fn default() -> Self {
         Self {
             todos: BTreeMap::new(),
-            // Example stuff:
             task: "".to_owned(),
             id: 0,
-            dayly: false,
+            daily: false,
         }
     }
 }
@@ -93,6 +98,23 @@ impl eframe::App for TemplateApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
+        let now = Local::now();
+        for (&_id, task) in &mut self.todos {
+            match task.period {
+                Interval::Daily(_) => {
+                    if task.period.extract() < now.day() as u8 {
+                        task.done = false;
+                        task.period = Interval::Daily(now.day() as u8);
+                    }
+                }
+                Interval::Weekly(_) => {
+                    if task.period.extract() < now.iso_week().week() as u8 {
+                        task.done = false;
+                        task.period = Interval::Weekly(now.iso_week().week() as u8);
+                    }
+                }
+            }
+        }
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
@@ -113,57 +135,32 @@ impl eframe::App for TemplateApp {
             });
         });
 
-        egui::CentralPanel::default().show(ctx, |ui| {
-            let now = Local::now();
-            if now.weekday() == Weekday::Mon {
-                for (&_id, task) in &mut self.todos {
-                    if task.time == Interval::Weekly && now - task.last_reset >= TimeDelta::days(7)
-                    {
-                        task.done = false;
-                        task.reset = true;
-                        task.last_reset = now;
-                    }
-                }
-            }
-
-            for (&_id, task) in &mut self.todos {
-                if task.time == Interval::Dayly && now - task.last_reset >= TimeDelta::days(1) {
-                    task.done = false;
-                    task.reset = true;
-                    task.last_reset = now;
-                }
-            }
-
+        CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
             ui.heading("Everyframe");
 
             let mut to_remove = Vec::new();
             ui.columns(2, |cols| {
                 for (&id, task) in &mut self.todos {
-                    if task.time == Interval::Dayly {
-                        cols[0].horizontal(|ui| {
-                            ui.checkbox(&mut task.done, "");
-                            ui.label(if task.time == Interval::Dayly {
-                                task.name.clone() + " [D]"
-                            } else {
-                                task.name.clone() + " [W]"
+                    match task.period {
+                        Interval::Daily(_) => {
+                            cols[0].horizontal(|ui| {
+                                ui.checkbox(&mut task.done, "");
+                                ui.label(task.name.clone() + " [D]");
+                                if ui.button("Remove").clicked() {
+                                    to_remove.push(id);
+                                }
                             });
-                            if ui.button("Remove").clicked() {
-                                to_remove.push(id);
-                            }
-                        });
-                    } else {
-                        cols[1].horizontal(|ui| {
-                            ui.checkbox(&mut task.done, "");
-                            ui.label(if task.time == Interval::Dayly {
-                                task.name.clone() + " [D]"
-                            } else {
-                                task.name.clone() + " [W]"
+                        }
+                        Interval::Weekly(_) => {
+                            cols[1].horizontal(|ui| {
+                                ui.checkbox(&mut task.done, "");
+                                ui.label(task.name.clone() + " [W]");
+                                if ui.button("Remove").clicked() {
+                                    to_remove.push(id);
+                                }
                             });
-                            if ui.button("Remove").clicked() {
-                                to_remove.push(id);
-                            }
-                        });
+                        }
                     }
                 }
             });
@@ -174,7 +171,7 @@ impl eframe::App for TemplateApp {
 
             ui.horizontal(|ui| {
                 // ui.label("add new task: ");
-                ui.checkbox(&mut self.dayly, "dayly?");
+                ui.checkbox(&mut self.daily, "daily?");
                 ui.text_edit_singleline(&mut self.task);
                 if ui.button("Add new").clicked() {
                     self.todos.insert(
@@ -182,18 +179,18 @@ impl eframe::App for TemplateApp {
                         Task {
                             done: false,
                             name: self.task.clone(),
-                            time: if self.dayly {
-                                Interval::Dayly
+                            period: if self.daily {
+                                Interval::Daily(1)
                             } else {
-                                Interval::Weekly
+                                Interval::Weekly(1)
                             },
-                            reset: true,
-                            last_reset: Local.timestamp_opt(1672534861, 0).unwrap(),
                         },
                     );
                     self.id += 1;
                 }
             });
+
+            print!("{:?}", self.todos);
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 egui::warn_if_debug_build(ui);
