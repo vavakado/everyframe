@@ -135,42 +135,8 @@ impl eframe::App for TemplateApp {
             });
         });
 
-        CentralPanel::default().show(ctx, |ui| {
-            // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("Everyframe");
-
-            let mut to_remove = Vec::new();
-            ui.columns(2, |cols| {
-                for (&id, task) in &mut self.todos {
-                    match task.period {
-                        Interval::Daily(_) => {
-                            cols[0].horizontal(|ui| {
-                                ui.checkbox(&mut task.done, "");
-                                ui.label(task.name.clone() + " [D]");
-                                if ui.button("Remove").clicked() {
-                                    to_remove.push(id);
-                                }
-                            });
-                        }
-                        Interval::Weekly(_) => {
-                            cols[1].horizontal(|ui| {
-                                ui.checkbox(&mut task.done, "");
-                                ui.label(task.name.clone() + " [W]");
-                                if ui.button("Remove").clicked() {
-                                    to_remove.push(id);
-                                }
-                            });
-                        }
-                    }
-                }
-            });
-            for id in to_remove {
-                self.todos.remove(&id);
-            }
-            ui.separator();
-
+        egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                // ui.label("add new task: ");
                 ui.checkbox(&mut self.daily, "daily?");
                 ui.text_edit_singleline(&mut self.task);
                 if ui.button("Add new").clicked() {
@@ -190,11 +156,49 @@ impl eframe::App for TemplateApp {
                 }
             });
 
-            print!("{:?}", self.todos);
-
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
+            ui.with_layout(egui::Layout::bottom_up(egui::Align::RIGHT), |ui| {
                 egui::warn_if_debug_build(ui);
             });
+        });
+
+        CentralPanel::default().show(ctx, |ui| {
+            // The central panel the region left after adding TopPanel's and SidePanel's
+            ui.heading("Everyframe");
+
+            let mut to_remove = Vec::new();
+            egui::ScrollArea::both().show(ui, |ui| {
+                ui.columns(2, |cols| {
+                    for (&id, task) in &mut self.todos {
+                        match task.period {
+                            Interval::Daily(_) => {
+                                cols[0].horizontal(|ui| {
+                                    ui.checkbox(&mut task.done, "");
+                                    ui.add(
+                                        egui::Label::new(task.name.clone() + " [D]").truncate(true),
+                                    );
+                                    if ui.button("X").clicked() {
+                                        to_remove.push(id);
+                                    }
+                                });
+                            }
+                            Interval::Weekly(_) => {
+                                cols[1].horizontal(|ui| {
+                                    ui.checkbox(&mut task.done, "");
+                                    ui.add(
+                                        egui::Label::new(task.name.clone() + " [W]").truncate(true),
+                                    );
+                                    if ui.button("X").clicked() {
+                                        to_remove.push(id);
+                                    }
+                                });
+                            }
+                        }
+                    }
+                });
+            });
+            for id in to_remove {
+                self.todos.remove(&id);
+            }
         });
     }
 }
