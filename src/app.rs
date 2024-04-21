@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use chrono::{Datelike, Local};
+use chrono::{DateTime, Datelike, Local};
 use egui::{CentralPanel, FontData, FontDefinitions, FontFamily};
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -88,6 +88,26 @@ impl TemplateApp {
     }
 }
 
+// handle unchecking tasks every day/week
+fn update_todos(now: DateTime<Local>, todos: &mut BTreeMap<u64, Task>) {
+    for (&_id, task) in todos {
+        match task.period {
+            Interval::Daily(_) => {
+                if task.period.extract() < now.day() as u8 {
+                    task.done = false;
+                    task.period = Interval::Daily(now.day() as u8);
+                }
+            }
+            Interval::Weekly(_) => {
+                if task.period.extract() < now.iso_week().week() as u8 {
+                    task.done = false;
+                    task.period = Interval::Weekly(now.iso_week().week() as u8);
+                }
+            }
+        }
+    }
+}
+
 impl eframe::App for TemplateApp {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
@@ -99,22 +119,7 @@ impl eframe::App for TemplateApp {
         // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
         let now = Local::now();
-        for (&_id, task) in &mut self.todos {
-            match task.period {
-                Interval::Daily(_) => {
-                    if task.period.extract() < now.day() as u8 {
-                        task.done = false;
-                        task.period = Interval::Daily(now.day() as u8);
-                    }
-                }
-                Interval::Weekly(_) => {
-                    if task.period.extract() < now.iso_week().week() as u8 {
-                        task.done = false;
-                        task.period = Interval::Weekly(now.iso_week().week() as u8);
-                    }
-                }
-            }
-        }
+        update_todos(now, &mut self.todos);
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
