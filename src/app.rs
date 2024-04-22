@@ -181,7 +181,7 @@ impl eframe::App for TemplateApp {
                                     ui.add(
                                         egui::Label::new(task.name.clone() + " [D]").truncate(true),
                                     );
-                                    if ui.button("X").clicked() {
+                                    if ui.button(" X ").clicked() {
                                         to_remove.push(id);
                                     }
                                 });
