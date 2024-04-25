@@ -1,9 +1,9 @@
 [package]
 name = "everyframe"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Vladimir Rubin <vavakado@proton.me>"]
 edition = "2021"
-include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]
+include = ["LICENSE", "**/*.rs", "Cargo.toml"]
 rust-version = "1.76"
 
 [package.metadata.docs.rs]
