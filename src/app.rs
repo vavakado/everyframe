@@ -93,13 +93,13 @@ fn update_todos(now: DateTime<Local>, todos: &mut BTreeMap<u64, Task>) {
     for (&_id, task) in todos {
         match task.period {
             Interval::Daily(_) => {
-                if task.period.extract() < now.day() as u8 {
+                if task.period.extract() != now.day() as u8 {
                     task.done = false;
                     task.period = Interval::Daily(now.day() as u8);
                 }
             }
             Interval::Weekly(_) => {
-                if task.period.extract() < now.iso_week().week() as u8 {
+                if task.period.extract() != now.iso_week().week() as u8 {
                     task.done = false;
                     task.period = Interval::Weekly(now.iso_week().week() as u8);
                 }
