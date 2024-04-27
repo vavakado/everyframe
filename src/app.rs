@@ -6,13 +6,15 @@ use egui::{CentralPanel, FontData, FontDefinitions, FontFamily};
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
-pub struct TemplateApp {
+pub struct TodoApp {
     // Example stuff:
     todos: BTreeMap<u64, Task>,
     #[serde(skip)]
     task: String,
     daily: bool,
     id: u64,
+    #[serde(skip)]
+    checked: bool,
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
@@ -48,18 +50,19 @@ impl Default for Task {
     }
 }
 
-impl Default for TemplateApp {
+impl Default for TodoApp {
     fn default() -> Self {
         Self {
             todos: BTreeMap::new(),
             task: "".to_owned(),
             id: 0,
             daily: false,
+            checked: false,
         }
     }
 }
 
-impl TemplateApp {
+impl TodoApp {
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         // This is also where you can customize the look and feel of egui using
@@ -108,7 +111,7 @@ fn update_todos(now: DateTime<Local>, todos: &mut BTreeMap<u64, Task>) {
     }
 }
 
-impl eframe::App for TemplateApp {
+impl eframe::App for TodoApp {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, self);
@@ -118,8 +121,11 @@ impl eframe::App for TemplateApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
-        let now = Local::now();
-        update_todos(now, &mut self.todos);
+        if !self.checked {
+            let now = Local::now();
+            update_todos(now, &mut self.todos);
+            self.checked = true
+        }
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:

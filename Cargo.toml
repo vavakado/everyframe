@@ -1,6 +1,6 @@
 [package]
 name = "everyframe"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Vladimir Rubin <vavakado@proton.me>"]
 edition = "2021"
 include = ["LICENSE", "**/*.rs", "Cargo.toml"]
