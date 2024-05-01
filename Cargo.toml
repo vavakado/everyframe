@@ -14,10 +14,11 @@ targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
 eframe = { version = "0.27.2", default-features = false, features = [
     "glow",        # Use the glow rendering backend. Alternative: "wgpu".
     "persistence", # Enable restoring app state when restarting the app.
+    "puffin",
 ] }
 egui = "0.27.2"
 log = "0.4"
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { version = ">=0.4.20", features = ["serde"] }
 
 # You only need serde if you want app persistence:
 serde = { version = "1", features = ["derive"] }
@@ -25,6 +26,8 @@ serde = { version = "1", features = ["derive"] }
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11"
+puffin = "0.19"
+puffin_http = "0.16"
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
