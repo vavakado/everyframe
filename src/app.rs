@@ -4,7 +4,7 @@ use chrono::{DateTime, Datelike, Local};
 use egui::{CentralPanel, FontData, FontDefinitions, FontFamily};
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TodoApp {
     // Example stuff:
