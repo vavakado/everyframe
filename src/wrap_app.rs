@@ -120,11 +120,6 @@ impl eframe::App for WrapApp {
 
         self.show_selected_app(ctx, frame);
     }
-
-    #[cfg(target_arch = "wasm32")]
-    fn as_any_mut(&mut self) -> Option<&mut dyn Any> {
-        Some(&mut *self)
-    }
 }
 
 impl WrapApp {
