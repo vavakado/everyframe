@@ -16,7 +16,7 @@ eframe = { version = "0.27.2", default-features = false, features = [
     "persistence", # Enable restoring app state when restarting the app.
     "puffin",
 ] }
-egui = "0.27.2"
+egui = "0.29.0"
 log = "0.4"
 chrono = { version = ">=0.4.20", features = ["serde"] }
 
